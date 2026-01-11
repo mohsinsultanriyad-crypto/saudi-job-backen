@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // ✅ backend URL (tumhara local backend 8000 pe hai)
-const BASE_URL = import.meta.env.VITE_API_URL || "https://saudi-job-backend.onrender.com";
+const BASE_URL = import.meta.env.VITE_API_URL || "https://saudijob.onrender.com";
 
 export const api = axios.create({
   baseURL: BASE_URL,
