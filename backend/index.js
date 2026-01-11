@@ -1,54 +1,54 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import path from "path";
 
-dotenv.config();
 const app = express();
-const __dirname = path.resolve();
 
-app.use(cors());
+// middleware
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
-// In-memory DB
+// In-memory Jobs DB (temporary)
 let jobs = [];
 
-// Health check
+// ✅ Health
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, message: "SAUDI JOB backend running" });
 });
 
-// Get jobs
+// ✅ Get all jobs
 app.get("/api/jobs", (req, res) => {
   res.json(jobs);
 });
 
-// Post job
+// ✅ Post a job
 app.post("/api/jobs", (req, res) => {
-  const job = {
-    _id: Date.now().toString(),
+  const newJob = {
+    id: Date.now().toString(),
     ...req.body,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   };
-  jobs.unshift(job);
-  res.status(201).json(job);
+  jobs.unshift(newJob);
+  res.status(201).json(newJob);
 });
 
-// Delete job
+// ✅ Delete job
 app.delete("/api/jobs/:id", (req, res) => {
   const { id } = req.params;
-  jobs = jobs.filter(j => j._id !== id);
-  res.json({ message: "Deleted" });
+  jobs = jobs.filter((j) => j.id !== id);
+  res.json({ message: "Job deleted successfully" });
 });
 
-// Serve frontend
+// ✅ Serve React build
+const __dirname = path.resolve();
 const distPath = path.join(__dirname, "frontend", "dist");
+
 app.use(express.static(distPath));
 
-// React SPA fallback
-app.get("*", (req, res) => {
+// ✅ SPA fallback (Express v5 safe)
+app.get(/^(?!\/api).*/, (req, res) => {
   res.sendFile(path.join(distPath, "index.html"));
 });
 
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log("Server running on " + PORT));
+const PORT = process.env.PORT || 8000;
+app.listen(PORT, () => console.log("Backend running on port:", PORT));
