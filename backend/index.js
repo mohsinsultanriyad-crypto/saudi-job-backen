@@ -1,72 +1,103 @@
 // backend/index.js
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import mongoose from "mongoose";
+import cookieParser from "cookie-parser";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
 const app = express();
 
-// ===== Middlewares =====
-app.use(cors({ origin: true, credentials: true }));
-app.use(express.json({ limit: "2mb" }));
+// --------------------
+// ✅ BASIC MIDDLEWARE
+// --------------------
+app.use(express.json({ limit: "1mb" }));
+app.use(cookieParser());
 
-// ===== Helpers =====
-const DAYS_30_MS = 30 * 24 * 60 * 60 * 1000;
+// CORS (safe default - allow all)
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  })
+);
 
-// ===== Mongo Model =====
+// --------------------
+// ✅ ENV
+// --------------------
+const PORT = process.env.PORT || 8000;
+const MONGO_URI = process.env.MONGO_URI;
+
+if (!MONGO_URI) {
+  console.error("❌ MONGO_URI missing in environment variables");
+  process.exit(1);
+}
+
+// --------------------
+// ✅ MONGOOSE CONNECT
+// --------------------
+mongoose
+  .connect(MONGO_URI, {
+    dbName: process.env.DB_NAME || "saudi_jobs",
+  })
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch((err) => {
+    console.error("❌ MongoDB Error:", err.message);
+    process.exit(1);
+  });
+
+// --------------------
+// ✅ JOB SCHEMA + MODEL
+// --------------------
 const jobSchema = new mongoose.Schema(
   {
-    name: { type: String, trim: true, default: "" },
-    companyName: { type: String, trim: true, default: "" },
-    phone: { type: String, trim: true, default: "" },
-    email: { type: String, trim: true, default: "" }, // used for delete verify
-    city: { type: String, trim: true, default: "" },
-    jobRole: { type: String, trim: true, default: "" },
-    description: { type: String, trim: true, default: "" },
-
-    // expiry logic
-    expiresAt: { type: Date, default: () => new Date(Date.now() + DAYS_30_MS) },
+    name: { type: String, default: "" },
+    companyName: { type: String, default: "" },
+    phone: { type: String, default: "" },
+    email: { type: String, required: true }, // used for delete verification
+    city: { type: String, default: "" },
+    jobRole: { type: String, default: "" },
+    description: { type: String, default: "" },
   },
   { timestamps: true }
 );
 
-// Auto delete after expiresAt (MongoDB TTL index)
-jobSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+// ✅ Auto delete after 30 days (TTL Index)
+jobSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 30 });
 
-// Search index (optional but helpful)
-jobSchema.index({ jobRole: "text", city: "text", companyName: "text", name: "text", description: "text" });
+const Job = mongoose.models.Job || mongoose.model("Job", jobSchema);
 
-const Job = mongoose.model("Job", jobSchema);
+// --------------------
+// ✅ HEALTH ROUTES (both work)
+// --------------------
+app.get("/health", (req, res) => res.json({ ok: true }));
+app.get("/api/health", (req, res) => res.json({ ok: true }));
 
-// ===== Routes =====
-app.get("/api/health", (req, res) => {
-  res.json({ ok: true, message: "SAUDI JOB backend running ✅" });
-});
+// --------------------
+// ✅ HELPERS
+// --------------------
+function buildQuery(q) {
+  const text = (q || "").trim();
+  if (!text) return {};
+  const rx = new RegExp(text, "i");
+  return {
+    $or: [{ jobRole: rx }, { city: rx }, { companyName: rx }, { name: rx }],
+  };
+}
 
-// GET jobs (pagination + search + non-expired)
-app.get("/api/jobs", async (req, res) => {
+// --------------------
+// ✅ JOB API (both /jobs and /api/jobs supported)
+// --------------------
+async function listJobs(req, res) {
   try {
-    const page = Math.max(parseInt(req.query.page || "1", 10), 1);
-    const limit = Math.min(Math.max(parseInt(req.query.limit || "30", 10), 1), 100);
+    const page = Math.max(parseInt(req.query.page || "1"), 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit || "30"), 1), 100);
     const q = (req.query.q || "").trim();
 
-    const now = new Date();
-
-    const filter = { expiresAt: { $gt: now } };
-
-    if (q) {
-      // regex search across multiple fields
-      const r = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-      filter.$or = [
-        { jobRole: r },
-        { city: r },
-        { companyName: r },
-        { name: r },
-        { description: r },
-      ];
-    }
+    const filter = buildQuery(q);
 
     const total = await Job.countDocuments(filter);
     const totalPages = Math.max(Math.ceil(total / limit), 1);
@@ -74,8 +105,7 @@ app.get("/api/jobs", async (req, res) => {
     const items = await Job.find(filter)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
-      .limit(limit)
-      .lean();
+      .limit(limit);
 
     res.json({
       items,
@@ -84,82 +114,103 @@ app.get("/api/jobs", async (req, res) => {
       total,
       totalPages,
     });
-  } catch (err) {
-    console.error("GET /api/jobs error:", err);
-    res.status(500).json({ message: "Server error" });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to load jobs" });
   }
-});
+}
 
-// POST job
-app.post("/api/jobs", async (req, res) => {
+async function createJob(req, res) {
   try {
-    const { name, companyName, phone, email, city, jobRole, description } = req.body || {};
+    const { name, companyName, phone, email, city, jobRole, description } =
+      req.body || {};
 
-    // basic validation
-    if (!jobRole || !city || !phone) {
-      return res.status(400).json({ message: "jobRole, city, phone are required" });
+    if (!email || !String(email).includes("@")) {
+      return res.status(400).json({ error: "Valid email is required" });
+    }
+    if (!jobRole || String(jobRole).trim().length < 2) {
+      return res.status(400).json({ error: "Job role is required" });
     }
 
-    const newJob = await Job.create({
+    const job = await Job.create({
       name: name || "",
       companyName: companyName || "",
       phone: phone || "",
-      email: email || "",
+      email: String(email).trim().toLowerCase(),
       city: city || "",
       jobRole: jobRole || "",
       description: description || "",
-      expiresAt: new Date(Date.now() + DAYS_30_MS),
     });
 
-    res.status(201).json(newJob);
-  } catch (err) {
-    console.error("POST /api/jobs error:", err);
-    res.status(500).json({ message: "Server error" });
+    res.status(201).json(job);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to create job" });
   }
-});
+}
 
-// DELETE job (verify by email)
-app.delete("/api/jobs/:id", async (req, res) => {
+async function deleteJob(req, res) {
   try {
     const { id } = req.params;
     const { email } = req.body || {};
 
-    if (!email) return res.status(400).json({ message: "Email required for delete verification" });
+    if (!email) {
+      return res.status(400).json({ error: "Email required for delete verify" });
+    }
 
     const job = await Job.findById(id);
-    if (!job) return res.status(404).json({ message: "Job not found" });
+    if (!job) return res.status(404).json({ error: "Job not found" });
 
-    // verify email (case-insensitive)
-    const saved = (job.email || "").toLowerCase().trim();
-    const provided = (email || "").toLowerCase().trim();
-
-    if (!saved || saved !== provided) {
-      return res.status(401).json({ message: "Email verification failed" });
+    if (String(job.email).toLowerCase() !== String(email).toLowerCase()) {
+      return res.status(403).json({ error: "Email verification failed" });
     }
 
     await Job.deleteOne({ _id: id });
-    res.json({ message: "Job deleted successfully ✅" });
-  } catch (err) {
-    console.error("DELETE /api/jobs/:id error:", err);
-    res.status(500).json({ message: "Server error" });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to delete job" });
   }
-});
-
-// ===== Mongo Connect + Start =====
-const PORT = process.env.PORT || 8000;
-
-if (!process.env.MONGO_URI) {
-  console.error("❌ MONGO_URI missing in .env");
-  process.exit(1);
 }
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("✅ MongoDB Connected");
-    app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
-  })
-  .catch((err) => {
-    console.error("❌ Mongo connect error:", err.message);
-    process.exit(1);
-  });
+// GET
+app.get("/jobs", listJobs);
+app.get("/api/jobs", listJobs);
+
+// POST
+app.post("/jobs", createJob);
+app.post("/api/jobs", createJob);
+
+// DELETE
+app.delete("/jobs/:id", deleteJob);
+app.delete("/api/jobs/:id", deleteJob);
+
+// --------------------
+// ✅ SERVE FRONTEND + FIX "Cannot GET /viewed"
+// --------------------
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// If your repo structure is:
+// /backend/index.js
+// /frontend/dist
+const distPath = path.join(__dirname, "..", "frontend", "dist");
+
+// serve static if dist exists
+app.use(express.static(distPath));
+
+// SPA fallback (ONLY for non-API routes)
+app.get("*", (req, res) => {
+  // if API route, return 404 json
+  if (req.path.startsWith("/api") || req.path.startsWith("/jobs")) {
+    return res.status(404).json({ error: "Route not found" });
+  }
+  return res.sendFile(path.join(distPath, "index.html"));
+});
+
+// --------------------
+// ✅ START
+// --------------------
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+});
