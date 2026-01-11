@@ -1,7 +1,10 @@
 import axios from "axios";
 
-// ✅ Always point to your live Render backend
-const BASE_URL = "https://saudijob.onrender.com/api";
+// Always use same domain in production
+const BASE_URL = 
+  import.meta.env.DEV 
+    ? "http://localhost:8000/api"
+    : "https://saudijob.onrender.com/api";
 
 export const api = axios.create({
   baseURL: BASE_URL,
