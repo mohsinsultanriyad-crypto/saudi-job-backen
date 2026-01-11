@@ -1,205 +1,92 @@
-import React, { useMemo, useState } from "react";
+import { useState } from "react";
 import { deleteJob } from "../services/jobApi";
+import { normalizeSaudiPhone, whatsappLink } from "../utils/phone";
+import { formatDate } from "../utils/date";
 
-// Optional helpers (agar tumhare project me exist karte hain)
-// Agar ye files nahi hain to in imports ko hata dena
-// import { normalizeSaudiPhone, whatsappLink } from "../utils/phone";
-// import { formatDate } from "../utils/date";
-
-export default function JobDetailsModal({ open, onClose, job, onDeleted }) {
+export default function JobDetailsModal({ job, onClose, onDeleted }) {
   const [email, setEmail] = useState("");
-  const [loadingDelete, setLoadingDelete] = useState(false);
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const createdAtText = useMemo(() => {
-    if (!job?.createdAt) return "";
-    try {
-      return new Date(job.createdAt).toLocaleString();
-    } catch {
-      return "";
-    }
-  }, [job?.createdAt]);
-
-  if (!open || !job) return null;
+  if (!job) return null;
 
   async function handleDelete() {
-    setError("");
-    const confirm = window.confirm("Are you sure you want to delete this job?");
-    if (!confirm) return;
-
-    if (!email.trim()) {
-      setError("Delete ke liye Email required hai.");
+    if (!email) {
+      alert("Enter email for delete verification");
       return;
     }
-
     try {
-      setLoadingDelete(true);
-      await deleteJob(job._id, email.trim());
-
-      // parent ko inform
-      if (typeof onDeleted === "function") onDeleted(job._id);
-
-      // close modal
-      if (typeof onClose === "function") onClose();
+      setLoading(true);
+      await deleteJob(job._id, email);
+      alert("Job deleted");
+      onDeleted();
+      onClose();
     } catch (e) {
-      const msg =
-        e?.response?.data?.message ||
-        e?.message ||
-        "Delete failed. Please try again.";
-      setError(msg);
+      alert("Delete failed");
     } finally {
-      setLoadingDelete(false);
+      setLoading(false);
     }
   }
 
+  const phone = normalizeSaudiPhone(job.phone);
+  const waLink = whatsappLink(phone);
+
   return (
-    <div style={styles.backdrop} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <div style={styles.header}>
-          <h3 style={styles.title}>{job.jobRole || "Job Details"}</h3>
-          <button style={styles.closeBtn} onClick={onClose}>
-            ✕
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white w-[90%] max-w-md rounded-xl p-5">
+
+        <h2 className="text-xl font-bold mb-2">{job.jobRole}</h2>
+        <p className="text-sm text-gray-500 mb-3">
+          {job.companyName} • {job.city}
+        </p>
+
+        <p className="mb-3">{job.description}</p>
+
+        <p className="text-sm text-gray-500">
+          Posted: {formatDate(job.createdAt)}
+        </p>
+
+        <div className="flex gap-3 mt-4">
+          <a
+            href={`tel:${phone}`}
+            className="bg-green-600 text-white px-4 py-2 rounded"
+          >
+            Call
+          </a>
+
+          <a
+            href={waLink}
+            className="bg-green-500 text-white px-4 py-2 rounded"
+          >
+            WhatsApp
+          </a>
+        </div>
+
+        <div className="mt-4">
+          <input
+            type="email"
+            placeholder="Email for delete verify"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="border w-full px-3 py-2 rounded mb-2"
+          />
+
+          <button
+            onClick={handleDelete}
+            disabled={loading}
+            className="bg-red-600 text-white w-full py-2 rounded"
+          >
+            {loading ? "Deleting..." : "Delete Job"}
           </button>
         </div>
 
-        <div style={styles.body}>
-          <Row label="Company" value={job.companyName} />
-          <Row label="Name" value={job.name} />
-          <Row label="City" value={job.city} />
-          <Row label="Phone" value={job.phone} />
-          <Row label="Email" value={job.email} />
+        <button
+          onClick={onClose}
+          className="mt-3 text-sm text-gray-600 w-full"
+        >
+          Close
+        </button>
 
-          {createdAtText ? <Row label="Posted" value={createdAtText} /> : null}
-
-          <div style={{ marginTop: 12 }}>
-            <div style={styles.label}>Description</div>
-            <div style={styles.desc}>
-              {job.description ? job.description : "—"}
-            </div>
-          </div>
-
-          <hr style={styles.hr} />
-
-          <div style={styles.deleteBox}>
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>
-              Delete (Email verification)
-            </div>
-
-            <input
-              style={styles.input}
-              type="email"
-              placeholder="Enter the same email used while posting"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-
-            {error ? <div style={styles.error}>{error}</div> : null}
-
-            <button
-              style={{
-                ...styles.deleteBtn,
-                opacity: loadingDelete ? 0.7 : 1,
-                cursor: loadingDelete ? "not-allowed" : "pointer",
-              }}
-              onClick={handleDelete}
-              disabled={loadingDelete}
-            >
-              {loadingDelete ? "Deleting..." : "Delete Job"}
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
 }
-
-function Row({ label, value }) {
-  return (
-    <div style={styles.row}>
-      <div style={styles.label}>{label}</div>
-      <div style={styles.value}>{value ? value : "—"}</div>
-    </div>
-  );
-}
-
-const styles = {
-  backdrop: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.55)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-    zIndex: 9999,
-  },
-  modal: {
-    width: "min(720px, 100%)",
-    background: "#fff",
-    borderRadius: 12,
-    overflow: "hidden",
-    boxShadow: "0 12px 40px rgba(0,0,0,0.25)",
-  },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "14px 16px",
-    borderBottom: "1px solid #eee",
-  },
-  title: { margin: 0, fontSize: 18 },
-  closeBtn: {
-    border: "none",
-    background: "transparent",
-    fontSize: 18,
-    cursor: "pointer",
-  },
-  body: { padding: 16 },
-  row: {
-    display: "grid",
-    gridTemplateColumns: "140px 1fr",
-    gap: 10,
-    padding: "6px 0",
-  },
-  label: { color: "#666", fontSize: 13 },
-  value: { color: "#111", fontSize: 14, wordBreak: "break-word" },
-  desc: {
-    marginTop: 6,
-    padding: 10,
-    border: "1px solid #eee",
-    borderRadius: 10,
-    background: "#fafafa",
-    whiteSpace: "pre-wrap",
-    lineHeight: 1.4,
-  },
-  hr: { border: "none", borderTop: "1px solid #eee", margin: "16px 0" },
-  deleteBox: {
-    padding: 12,
-    border: "1px solid #ffe1e1",
-    background: "#fff7f7",
-    borderRadius: 12,
-  },
-  input: {
-    width: "100%",
-    padding: "10px 12px",
-    borderRadius: 10,
-    border: "1px solid #ddd",
-    outline: "none",
-    marginTop: 8,
-  },
-  error: {
-    marginTop: 8,
-    color: "#b00020",
-    fontSize: 13,
-  },
-  deleteBtn: {
-    marginTop: 10,
-    width: "100%",
-    padding: "10px 12px",
-    borderRadius: 10,
-    border: "none",
-    background: "#e53935",
-    color: "#fff",
-    fontWeight: 700,
-  },
-};
