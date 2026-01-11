@@ -1,73 +1,51 @@
 import express from "express";
 import cors from "cors";
+import dotenv from "dotenv";
 import path from "path";
 
+dotenv.config();
 const app = express();
 const __dirname = path.resolve();
 
-// Middleware
-app.use(cors({ origin: true, credentials: true }));
+app.use(cors());
 app.use(express.json());
 
-// ============================
-// In-memory Jobs Database
-// ============================
+// In-memory Jobs
 let jobs = [];
 
-// ============================
 // Health Check
-// ============================
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, message: "SAUDI JOB backend running ✅" });
+  res.json({ ok: true, message: "SAUDI JOB backend running" });
 });
 
-// ============================
-// Get All Jobs
-// ============================
+// APIs
 app.get("/api/jobs", (req, res) => {
   res.json(jobs);
 });
 
-// ============================
-// Post New Job
-// ============================
 app.post("/api/jobs", (req, res) => {
-  const newJob = {
-    id: Date.now().toString(),
+  const job = {
+    _id: Date.now().toString(),
     ...req.body,
+    createdAt: new Date().toISOString()
   };
-
-  jobs.unshift(newJob);
-  res.status(201).json(newJob);
+  jobs.unshift(job);
+  res.status(201).json(job);
 });
 
-// ============================
-// Delete Job
-// ============================
 app.delete("/api/jobs/:id", (req, res) => {
   const { id } = req.params;
-  jobs = jobs.filter((job) => job.id !== id);
-  res.json({ message: "Job deleted successfully ✅" });
+  jobs = jobs.filter(j => j._id !== id);
+  res.json({ message: "Deleted" });
 });
 
-// ============================
-// Serve React Frontend Build
-// ============================
+// Serve React Frontend
 const distPath = path.join(__dirname, "frontend", "dist");
 app.use(express.static(distPath));
 
-// ============================
-// SPA Fallback (Express v5 Safe)
-// ============================
-app.use((req, res, next) => {
-  if (req.path.startsWith("/api")) return next();
-  return res.sendFile(path.join(distPath, "index.html"));
+app.get("*", (req, res) => {
+  res.sendFile(path.join(distPath, "index.html"));
 });
 
-// ============================
-// Start Server
-// ============================
-const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => {
-  console.log("Backend running on port:", PORT);
-});
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log("Server running on " + PORT));
