@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">saudi-job</string>
+    <string name="title_activity_main">saudi-job</string>
+    <string name="package_name">com.saudijob.app</string>
+    <string name="custom_url_scheme">com.saudijob.app</string>
+</resources>
