@@ -4,12 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "npm install --prefix frontend && npm run build --prefix frontend",
-    "start": "node backend/index.js"
+    "start": "node backend/index.js",
+    "build": "npm install --prefix frontend && npm run build --prefix frontend"
   },
   "dependencies": {
-    "express": "^5.2.1",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.3"
+    "express": "^5.0.1",
+    "cors": "^2.8.5"
   }
 }
