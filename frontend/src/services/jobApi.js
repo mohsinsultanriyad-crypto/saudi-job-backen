@@ -1,6 +1,10 @@
 import axios from "axios";
 
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+// ✅ Local dev => localhost
+// ✅ Live => same domain (Render) so relative "/api"
+const BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? "http://localhost:8000/api" : "/api");
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -8,7 +12,9 @@ export const api = axios.create({
 
 // ✅ pagination + search
 export function getJobs({ page = 1, limit = 30, q = "" } = {}) {
-  return api.get(`/jobs?page=${page}&limit=${limit}&q=${encodeURIComponent(q)}`);
+  return api.get(`/jobs`, {
+    params: { page, limit, q },
+  });
 }
 
 export function postJob(payload) {
