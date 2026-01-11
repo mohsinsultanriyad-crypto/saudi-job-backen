@@ -1,52 +1,38 @@
 import { NavLink } from "react-router-dom";
 
 export default function BottomNav() {
-  const linkStyle = ({ isActive }) => ({
-    flex: 1,
-    textAlign: "center",
-    padding: "10px 0",
-    textDecoration: "none",
-    fontWeight: 900,
-    fontSize: 12,
-    color: isActive ? "#1c8b3c" : "#9aa3af",
-  });
-
-  const bar = {
-    position: "fixed",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    background: "#fff",
-    borderTop: "1px solid #eef1f0",
-    display: "flex",
-    paddingBottom: 6,
-    paddingTop: 6,
-    zIndex: 60,
-  };
-
-  const icon = { display: "block", fontSize: 18, marginBottom: 4 };
-
   return (
     <div style={bar}>
-      <NavLink to="/" style={linkStyle} end>
-        <span style={icon}>🧾</span>
-        All Jobs
-      </NavLink>
-
-      <NavLink to="/post" style={linkStyle}>
-        <span style={icon}>➕</span>
-        Post Job
-      </NavLink>
-
-      <NavLink to="/viewed" style={linkStyle}>
-        <span style={icon}>👁️</span>
-        Viewed
-      </NavLink>
-
-      <NavLink to="/notifications" style={linkStyle}>
-        <span style={icon}>🔔</span>
-        Alerts
-      </NavLink>
+      <NavLink to="/" style={({ isActive }) => link(isActive)}>🏠<div style={txt}>All Jobs</div></NavLink>
+      <NavLink to="/post" style={({ isActive }) => link(isActive)}>➕<div style={txt}>Post</div></NavLink>
+      <NavLink to="/viewed" style={({ isActive }) => link(isActive)}>👁<div style={txt}>Viewed</div></NavLink>
+      <NavLink to="/notify" style={({ isActive }) => link(isActive)}>🔔<div style={txt}>Notify</div></NavLink>
     </div>
   );
 }
+
+const bar = {
+  position: "fixed",
+  left: 0,
+  right: 0,
+  bottom: 0,
+  height: 70,
+  background: "#ffffff",
+  borderTop: "1px solid #eef2f7",
+  display: "grid",
+  gridTemplateColumns: "repeat(4, 1fr)",
+  alignItems: "center",
+  paddingBottom: 6,
+};
+
+const link = (active) => ({
+  textDecoration: "none",
+  color: active ? "#1c8b3c" : "#0f172a",
+  fontWeight: 950,
+  display: "grid",
+  placeItems: "center",
+  gap: 2,
+  fontSize: 20,
+});
+
+const txt = { fontSize: 11, fontWeight: 950 };

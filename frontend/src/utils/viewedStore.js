@@ -1,4 +1,4 @@
-const KEY = "saudi_job_viewed";
+const KEY = "SAUDI_JOB_VIEWED";
 
 export function getViewedJobs() {
   try {
@@ -13,7 +13,7 @@ export function addViewedJob(job) {
   const exists = list.some((j) => j._id === job._id);
   if (!exists) {
     list.unshift(job);
-    localStorage.setItem(KEY, JSON.stringify(list));
+    localStorage.setItem(KEY, JSON.stringify(list.slice(0, 200)));
   }
 }
 

@@ -34,9 +34,7 @@ export default function PostJob() {
       });
 
       alert("Success! Your job is live ✅");
-
-      // ✅ AUTO HOME
-      navigate("/", { replace: true });
+      navigate("/", { replace: true }); // ✅ auto home
     } catch (e) {
       console.error(e);
       alert("Failed to publish job ❌");
@@ -53,7 +51,7 @@ export default function PostJob() {
         <input style={inp} placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
         <input style={inp} placeholder="Company Name" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
         <input style={inp} placeholder="Phone Number" value={phone} onChange={(e) => setPhone(e.target.value)} />
-        <input style={inp} placeholder="Email (for deletion verify)" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input style={inp} placeholder="Email (for edit/delete verify)" value={email} onChange={(e) => setEmail(e.target.value)} />
 
         <select style={inp} value={city} onChange={(e) => setCity(e.target.value)}>
           {cities.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -76,29 +74,18 @@ export default function PostJob() {
   );
 }
 
-const page = {
-  padding: 16,
-  paddingBottom: 90,
-  background: "#ffffff",
-  minHeight: "100vh",
-};
-
-const title = {
-  margin: 0,
-  fontSize: 28,
-  fontWeight: 900,
-  color: "#111827",
-};
+const page = { padding: 16, paddingBottom: 90, background: "#ffffff", minHeight: "100vh" };
+const title = { margin: 0, fontSize: 28, fontWeight: 950, color: "#0f172a" };
 
 const card = {
   marginTop: 14,
   background: "#ffffff",
-  border: "1px solid #eef1f0",
+  border: "1px solid #eef2f7",
   borderRadius: 18,
   padding: 14,
   display: "grid",
   gap: 10,
-  boxShadow: "0 4px 14px rgba(0,0,0,0.04)",
+  boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
 };
 
 const inp = {
@@ -118,6 +105,6 @@ const btn = {
   border: 0,
   background: "#1c8b3c",
   color: "white",
-  fontWeight: 900,
+  fontWeight: 950,
   cursor: "pointer",
 };

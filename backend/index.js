@@ -1,131 +1,153 @@
-// backend/index.js
 import express from "express";
 import cors from "cors";
-import mongoose from "mongoose";
 import dotenv from "dotenv";
-import cookieParser from "cookie-parser";
 import path from "path";
 import { fileURLToPath } from "url";
+import mongoose from "mongoose";
 
+// -------------------- CONFIG --------------------
 dotenv.config();
 
 const app = express();
 app.use(express.json());
-app.use(cookieParser());
-app.use(cors({ origin: true, credentials: true }));
 
-// ---------------- ENV ----------------
+// ✅ CORS (simple)
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allowedHeaders: ["Content-Type"],
+  })
+);
+
 const PORT = process.env.PORT || 8000;
 const MONGO_URI = process.env.MONGO_URI;
 
-if (!MONGO_URI) {
-  console.log("❌ MONGO_URI missing");
-  process.exit(1);
-}
-
-// ---------------- MONGO CONNECT ----------------
-mongoose
-  .connect(MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch((err) => {
-    console.log("❌ Mongo Error:", err.message);
+// -------------------- MONGO CONNECT --------------------
+async function connectDB() {
+  if (!MONGO_URI) {
+    console.error("❌ MONGO_URI missing in env");
     process.exit(1);
-  });
+  }
+  await mongoose.connect(MONGO_URI);
+  console.log("✅ MongoDB Connected");
+}
+connectDB().catch((e) => {
+  console.error("❌ Mongo connect failed:", e.message);
+  process.exit(1);
+});
 
-// ---------------- JOB MODEL ----------------
+// -------------------- MODEL --------------------
 const jobSchema = new mongoose.Schema(
   {
-    name: String,
-    companyName: String,
-    phone: String,
-    email: { type: String, required: true },
-    city: String,
-    jobRole: String,
-    description: String,
+    name: { type: String, default: "" },
+    companyName: { type: String, default: "" },
+    phone: { type: String, default: "" },
+    email: { type: String, default: "" },
+    city: { type: String, default: "" },
+    jobRole: { type: String, default: "" },
+    description: { type: String, default: "" },
+
+    // optional: auto-expire after 30 days (agar chaho)
+    // expiresAt: { type: Date, default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
   },
   { timestamps: true }
 );
 
-// Auto delete after 30 days
-jobSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 30 });
-
 const Job = mongoose.model("Job", jobSchema);
 
-// ---------------- HEALTH ----------------
-app.get("/api/health", (req, res) => res.json({ ok: true }));
+// -------------------- API ROUTES --------------------
 
-// ---------------- JOB ROUTES ----------------
+// ✅ Health
+app.get("/api/health", (req, res) => {
+  res.json({ ok: true });
+});
 
-// GET Jobs (pagination + search)
+// ✅ Get Jobs (pagination + search)
 app.get("/api/jobs", async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page || "1"), 1);
-    const limit = Math.min(parseInt(req.query.limit || "30"), 50);
+    const limit = Math.min(Math.max(parseInt(req.query.limit || "30"), 1), 100);
     const q = (req.query.q || "").trim();
 
-    const search = q
+    const filter = q
       ? {
           $or: [
-            { jobRole: new RegExp(q, "i") },
-            { city: new RegExp(q, "i") },
-            { companyName: new RegExp(q, "i") },
+            { jobRole: { $regex: q, $options: "i" } },
+            { city: { $regex: q, $options: "i" } },
+            { companyName: { $regex: q, $options: "i" } },
+            { name: { $regex: q, $options: "i" } },
+            { description: { $regex: q, $options: "i" } },
           ],
         }
       : {};
 
-    const total = await Job.countDocuments(search);
-    const totalPages = Math.ceil(total / limit);
+    const total = await Job.countDocuments(filter);
+    const totalPages = Math.max(Math.ceil(total / limit), 1);
 
-    const items = await Job.find(search)
+    const items = await Job.find(filter)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
 
-    res.json({ items, page, totalPages });
+    res.json({ items, page, totalPages, total });
   } catch (e) {
-    res.status(500).json({ error: "Load failed" });
+    res.status(500).json({ message: e.message });
   }
 });
 
-// POST Job
+// ✅ Post Job
 app.post("/api/jobs", async (req, res) => {
   try {
-    const job = await Job.create(req.body);
-    res.status(201).json(job);
-  } catch {
-    res.status(400).json({ error: "Create failed" });
+    const payload = req.body || {};
+    if (!payload.jobRole || !payload.city || !payload.description) {
+      return res.status(400).json({ message: "jobRole, city, description required" });
+    }
+    const created = await Job.create(payload);
+    res.status(201).json(created);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
   }
 });
 
-// DELETE Job
+// ✅ Delete Job (verify by email)
 app.delete("/api/jobs/:id", async (req, res) => {
-  const { id } = req.params;
-  const { email } = req.body;
+  try {
+    const { id } = req.params;
+    const { email } = req.body || {};
 
-  const job = await Job.findById(id);
-  if (!job) return res.status(404).json({ error: "Not found" });
+    if (!email) return res.status(400).json({ message: "Email required for delete" });
 
-  if (job.email.toLowerCase() !== email.toLowerCase())
-    return res.status(403).json({ error: "Email verify failed" });
+    const job = await Job.findById(id);
+    if (!job) return res.status(404).json({ message: "Job not found" });
 
-  await Job.deleteOne({ _id: id });
-  res.json({ ok: true });
+    if ((job.email || "").toLowerCase() !== String(email).toLowerCase()) {
+      return res.status(401).json({ message: "Email verification failed" });
+    }
+
+    await Job.deleteOne({ _id: id });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
 });
 
-// ---------------- SERVE FRONTEND ----------------
-
+// -------------------- SERVE FRONTEND (VITE BUILD) --------------------
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// frontend/dist path
+// ✅ Vite build path: projectRoot/frontend/dist
 const distPath = path.join(__dirname, "..", "frontend", "dist");
 
+// static assets
 app.use(express.static(distPath));
 
-// FIXED wildcard
-app.get("/*", (req, res) => {
+// ✅ IMPORTANT: Express v5 safe SPA fallback (NO "/*" error)
+app.get(/^(?!\/api).*$/, (req, res) => {
   res.sendFile(path.join(distPath, "index.html"));
 });
 
-// ---------------- START ----------------
-app.listen(PORT, () => console.log("✅ Server Running on", PORT));
+// -------------------- START --------------------
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+});

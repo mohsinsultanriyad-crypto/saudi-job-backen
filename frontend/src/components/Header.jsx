@@ -1,31 +1,64 @@
 export default function Header() {
   return (
-    <div style={{ padding: "14px 16px", borderBottom: "1px solid #eee" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div
-          style={{
-            width: 34,
-            height: 34,
-            borderRadius: 10,
-            background: "#1c8b3c",
-            display: "grid",
-            placeItems: "center",
-            color: "white",
-            fontWeight: 700,
-          }}
-        >
-          S
-        </div>
+    <div style={wrap}>
+      <div style={row}>
+        <div style={logoBox}>S</div>
 
-        <div style={{ lineHeight: 1.1 }}>
-          <div style={{ fontWeight: 800, letterSpacing: 0.5 }}>
-            SAUDI <span style={{ color: "#1c8b3c" }}>JOB</span>
-            <span style={{ color: "#999", fontWeight: 600, marginLeft: 6 }}>
-              KINGDOM OF SAUDI ARABIA
-            </span>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+          <div style={brand}>
+            <span style={{ color: "#111827" }}>SAUDI </span>
+            <span style={{ color: "#16a34a" }}>JOB</span>
           </div>
+
+          <div style={tagline}>KINGDOM OF SAUDI ARABIA</div>
         </div>
       </div>
+
+      <div style={divider} />
     </div>
   );
 }
+
+const wrap = {
+  padding: "14px 16px 0px",
+  background: "#fff",
+};
+
+const row = {
+  display: "flex",
+  alignItems: "center",
+  gap: 14,
+};
+
+const logoBox = {
+  width: 56,
+  height: 56,
+  borderRadius: 14,
+  background: "#16a34a",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "#fff",
+  fontWeight: 900,
+  fontSize: 28,
+};
+
+const brand = {
+  fontSize: 34,
+  fontWeight: 900,
+  letterSpacing: 1,
+  lineHeight: 1,
+};
+
+const tagline = {
+  fontSize: 16,
+  fontWeight: 700,
+  color: "#9ca3af",
+  letterSpacing: 2,
+};
+
+const divider = {
+  marginTop: 12,
+  height: 1,
+  background: "#eef2f7",
+};
