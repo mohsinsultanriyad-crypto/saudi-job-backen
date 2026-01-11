@@ -5,26 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d6255829-869a-4bb4-8927-681824009793" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/android/app/capacitor.build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/android/app/capacitor.build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/android/capacitor.settings.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/android/capacitor.settings.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/BottomNav.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/BottomNav.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/Header.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Header.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/JobDetailsModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/JobDetailsModal.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/AllJobs.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/AllJobs.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Notifications.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Notifications.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/PostJob.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/PostJob.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/ViewedJobs.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/ViewedJobs.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/services/jobApi.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/services/jobApi.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/utils/date.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/utils/date.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/utils/phone.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/utils/phone.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/utils/viewedStore.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/utils/viewedStore.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/backend/package.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
