@@ -4,19 +4,20 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
+import fs from "fs";
 
-// -------------------- CONFIG --------------------
 dotenv.config();
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// ✅ CORS (simple)
+// ✅ CORS
 app.use(
   cors({
     origin: "*",
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allowedHeaders: ["Content-Type"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
@@ -40,16 +41,13 @@ connectDB().catch((e) => {
 // -------------------- MODEL --------------------
 const jobSchema = new mongoose.Schema(
   {
-    name: { type: String, default: "" },
+    name: { type: String, required: true },
     companyName: { type: String, default: "" },
-    phone: { type: String, default: "" },
-    email: { type: String, default: "" },
-    city: { type: String, default: "" },
-    jobRole: { type: String, default: "" },
-    description: { type: String, default: "" },
-
-    // optional: auto-expire after 30 days (agar chaho)
-    // expiresAt: { type: Date, default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
+    phone: { type: String, required: true },
+    email: { type: String, required: true },
+    city: { type: String, required: true },
+    jobRole: { type: String, required: true },
+    description: { type: String, required: true },
   },
   { timestamps: true }
 );
@@ -57,13 +55,10 @@ const jobSchema = new mongoose.Schema(
 const Job = mongoose.model("Job", jobSchema);
 
 // -------------------- API ROUTES --------------------
-
-// ✅ Health
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true });
+  res.json({ ok: true, message: "SAUDI JOB backend running" });
 });
 
-// ✅ Get Jobs (pagination + search)
 app.get("/api/jobs", async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page || "1"), 1);
@@ -96,21 +91,32 @@ app.get("/api/jobs", async (req, res) => {
   }
 });
 
-// ✅ Post Job
 app.post("/api/jobs", async (req, res) => {
   try {
-    const payload = req.body || {};
-    if (!payload.jobRole || !payload.city || !payload.description) {
-      return res.status(400).json({ message: "jobRole, city, description required" });
+    const { name, companyName, phone, email, city, jobRole, description } = req.body || {};
+
+    if (!name || !phone || !email || !city || !jobRole || !description) {
+      return res.status(400).json({
+        message: "Missing required fields: name, phone, email, city, jobRole, description",
+      });
     }
-    const created = await Job.create(payload);
+
+    const created = await Job.create({
+      name,
+      companyName: companyName || "",
+      phone,
+      email,
+      city,
+      jobRole,
+      description,
+    });
+
     res.status(201).json(created);
   } catch (e) {
     res.status(500).json({ message: e.message });
   }
 });
 
-// ✅ Delete Job (verify by email)
 app.delete("/api/jobs/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -126,26 +132,33 @@ app.delete("/api/jobs/:id", async (req, res) => {
     }
 
     await Job.deleteOne({ _id: id });
-    res.json({ ok: true });
+    res.json({ ok: true, message: "Deleted ✅" });
   } catch (e) {
     res.status(500).json({ message: e.message });
   }
 });
 
-// -------------------- SERVE FRONTEND (VITE BUILD) --------------------
+// -------------------- SERVE FRONTEND --------------------
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ✅ Vite build path: projectRoot/frontend/dist
-const distPath = path.join(__dirname, "..", "frontend", "dist");
+// ✅ Auto-detect dist path (root & backend dono handle)
+const distCandidates = [
+  path.join(__dirname, "frontend", "dist"),           // index.js at root
+  path.join(__dirname, "..", "frontend", "dist"),    // index.js inside backend folder
+];
 
-// static assets
-app.use(express.static(distPath));
+let distPath = distCandidates.find((p) => fs.existsSync(p));
+if (distPath) {
+  app.use(express.static(distPath));
 
-// ✅ IMPORTANT: Express v5 safe SPA fallback (NO "/*" error)
-app.get(/^(?!\/api).*$/, (req, res) => {
-  res.sendFile(path.join(distPath, "index.html"));
-});
+  // SPA fallback
+  app.get(/^(?!\/api).*$/, (req, res) => {
+    res.sendFile(path.join(distPath, "index.html"));
+  });
+} else {
+  console.warn("⚠️ frontend/dist not found. Only API will work.");
+}
 
 // -------------------- START --------------------
 app.listen(PORT, () => {
