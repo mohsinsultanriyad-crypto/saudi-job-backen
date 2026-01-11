@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "https://saudi-job-backen.onrender.com/api",
+  baseURL: "https://saudi-job-backend.onrender.com",
 });
 
 export default API;
