@@ -12,15 +12,14 @@ const __dirname = path.resolve();
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
-// In-memory DB
+// In-memory jobs
 let jobs = [];
 
-// Health
+// ✅ API routes
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, message: "SAUDI JOB backend running ✅" });
 });
 
-// APIs
 app.get("/api/jobs", (req, res) => {
   res.json(jobs);
 });
@@ -45,7 +44,7 @@ app.post("/api/jobs", (req, res) => {
   };
 
   jobs.unshift(newJob);
-  return res.status(201).json(newJob);
+  res.status(201).json(newJob);
 });
 
 app.delete("/api/jobs/:id", (req, res) => {
@@ -65,17 +64,13 @@ app.delete("/api/jobs/:id", (req, res) => {
   return res.json({ message: "Job deleted successfully ✅" });
 });
 
-// ✅ Serve frontend build
+// ✅ Serve React build (frontend/dist)
 const distPath = path.join(__dirname, "frontend", "dist");
 app.use(express.static(distPath));
 
-// ✅ Express v5 safe fallback (NO app.get("*") / "/*")
-app.use((req, res, next) => {
-  // API routes ko touch mat karo
-  if (req.path.startsWith("/api")) return next();
-
-  // SPA fallback
-  return res.sendFile(path.join(distPath, "index.html"));
+// ✅ SPA fallback (important!)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(distPath, "index.html"));
 });
 
 const PORT = process.env.PORT || 8000;
