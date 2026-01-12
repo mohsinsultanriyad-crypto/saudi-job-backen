@@ -4,29 +4,26 @@ import JobCard from "../components/JobCard";
 
 export default function AllJobs() {
   const [jobs, setJobs] = useState([]);
-  const [loading, setLoading] = useState(true);
 
-  async function loadJobs() {
+  async function load() {
     try {
       const { data } = await getJobs();
-      setJobs(data.items); // ✅ FIXED
+      setJobs(data.items || []); // safe
     } catch (e) {
-      console.error("Failed to load jobs", e);
-    } finally {
-      setLoading(false);
+      console.error("Load failed", e);
     }
   }
 
   useEffect(() => {
-    loadJobs();
+    load();
   }, []);
-
-  if (loading) return <p style={{ padding: 20 }}>Loading...</p>;
 
   return (
     <div style={{ paddingBottom: 60 }}>
       {jobs.length === 0 ? (
-        <h3 style={{ textAlign: "center" }}>No jobs found</h3>
+        <h3 style={{ textAlign: "center", marginTop: 30 }}>
+          No jobs found
+        </h3>
       ) : (
         jobs.map((job) => <JobCard key={job._id} job={job} />)
       )}
