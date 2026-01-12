@@ -1,134 +1,118 @@
 import { useEffect, useState } from "react";
 import { getJobs } from "../services/jobApi";
+import JobDetailsModal from "../components/JobDetailsModal";
 
 export default function AllJobs() {
-  const [items, setItems] = useState([]);
+  const [jobs, setJobs] = useState([]);
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState("");
+  const [selectedJob, setSelectedJob] = useState(null);
+  const limit = 30;
 
-  async function load(p = page, search = q) {
+  async function fetchJobs(p = page, search = q) {
     try {
       setLoading(true);
-      setErr("");
-
-      const res = await getJobs({ page: p, limit: 30, q: search });
 
       // ✅ IMPORTANT: backend returns { items, page, totalPages, total }
+      const res = await getJobs({ page: p, limit, q: search });
+
       const data = res?.data || {};
-      setItems(Array.isArray(data.items) ? data.items : []);
-      setTotalPages(data.totalPages || 1);
+      const items = Array.isArray(data.items) ? data.items : [];
+
+      setJobs(items);
       setPage(data.page || p);
-    } catch (e) {
-      console.error("GET /jobs failed:", e);
-      setErr(e?.response?.data?.message || e.message || "Failed to load jobs");
-      setItems([]);
+      setTotalPages(data.totalPages || 1);
+    } catch (err) {
+      console.log("Fetch Jobs Error:", err?.message);
+      setJobs([]);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    load(1, "");
+    fetchJobs(1, "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const onSearch = () => load(1, q);
+  const handleSearch = () => {
+    fetchJobs(1, q);
+  };
 
   return (
-    <div style={{ padding: 16 }}>
-      <input
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Search job or city..."
-        style={{
-          width: "100%",
-          padding: 12,
-          borderRadius: 12,
-          border: "1px solid #ddd",
-          marginBottom: 12,
-        }}
-      />
+    <div className="min-h-screen bg-[#f6f7f9] pb-24">
+      <div className="max-w-2xl mx-auto px-4 pt-4">
+        {/* Search */}
+        <input
+          className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-base outline-none"
+          placeholder="Search job or city..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
 
-      <button
-        onClick={onSearch}
-        style={{
-          width: "100%",
-          padding: 12,
-          borderRadius: 12,
-          border: "none",
-          fontWeight: "bold",
-          marginBottom: 16,
-        }}
-      >
-        Search
-      </button>
+        <button
+          onClick={handleSearch}
+          className="mt-3 w-full rounded-2xl bg-gray-100 py-3 font-semibold"
+        >
+          Search
+        </button>
 
-      {loading && <div>Loading...</div>}
-      {!!err && <div style={{ color: "red" }}>{err}</div>}
-
-      {!loading && items.length === 0 && !err && (
-        <h3>No jobs found</h3>
-      )}
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {items.map((job) => (
-          <div
-            key={job._id}
-            style={{
-              border: "1px solid #eee",
-              borderRadius: 14,
-              padding: 12,
-              background: "#fff",
-            }}
-          >
-            <div style={{ fontWeight: "bold", fontSize: 18 }}>
-              {job.jobRole || "Job"}
-            </div>
-            <div style={{ opacity: 0.8 }}>
-              {job.city || ""} {job.companyName ? `• ${job.companyName}` : ""}
-            </div>
-            <div style={{ marginTop: 8 }}>
-              {job.description || ""}
-            </div>
-            <div style={{ marginTop: 8, fontSize: 13, opacity: 0.7 }}>
-              {job.name ? `Posted by: ${job.name}` : ""}
-            </div>
+        {/* Status */}
+        {loading ? (
+          <div className="mt-6 text-lg font-semibold">Loading...</div>
+        ) : jobs.length === 0 ? (
+          <div className="mt-6 text-2xl font-bold">No jobs found</div>
+        ) : (
+          <div className="mt-5 space-y-3">
+            {jobs.map((job) => (
+              <button
+                key={job._id}
+                onClick={() => setSelectedJob(job)}
+                className="w-full text-left rounded-2xl bg-white p-4 shadow-sm border border-gray-100"
+              >
+                <div className="text-lg font-bold">{job.jobRole || "Job"}</div>
+                <div className="text-sm text-gray-600 mt-1">
+                  {job.city || ""} • {job.companyName || ""}
+                </div>
+                <div className="text-sm text-gray-500 mt-2 line-clamp-2">
+                  {job.description || ""}
+                </div>
+              </button>
+            ))}
           </div>
-        ))}
-      </div>
+        )}
 
-      <div
-        style={{
-          display: "flex",
-          gap: 10,
-          alignItems: "center",
-          justifyContent: "center",
-          marginTop: 16,
-        }}
-      >
-        <button
-          disabled={page <= 1 || loading}
-          onClick={() => load(page - 1, q)}
-          style={{ padding: "10px 14px", borderRadius: 10 }}
-        >
-          Prev
-        </button>
+        {/* Pagination */}
+        <div className="mt-6 flex items-center justify-center gap-4">
+          <button
+            className="rounded-xl border px-5 py-2 disabled:opacity-40"
+            disabled={page <= 1 || loading}
+            onClick={() => fetchJobs(page - 1, q)}
+          >
+            Prev
+          </button>
 
-        <div>
-          Page {page} / {totalPages}
+          <div className="font-semibold">
+            Page {page} / {totalPages}
+          </div>
+
+          <button
+            className="rounded-xl border px-5 py-2 disabled:opacity-40"
+            disabled={page >= totalPages || loading}
+            onClick={() => fetchJobs(page + 1, q)}
+          >
+            Next
+          </button>
         </div>
-
-        <button
-          disabled={page >= totalPages || loading}
-          onClick={() => load(page + 1, q)}
-          style={{ padding: "10px 14px", borderRadius: 10 }}
-        >
-          Next
-        </button>
       </div>
+
+      {/* Modal */}
+      {selectedJob && (
+        <JobDetailsModal job={selectedJob} onClose={() => setSelectedJob(null)} />
+      )}
     </div>
   );
 }
