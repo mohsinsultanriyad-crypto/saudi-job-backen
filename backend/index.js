@@ -10,108 +10,153 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
-app.use(cors({
-  origin: "*",
-  methods: ["GET","POST","PUT","PATCH","DELETE"],
-  allowedHeaders: ["Content-Type"]
-}));
+// ✅ CORS
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 const PORT = process.env.PORT || 8000;
 const MONGO_URI = process.env.MONGO_URI;
 
-// ---------------- CONNECT MONGO ----------------
+// ✅ Mongo Connect
 async function connectDB() {
   if (!MONGO_URI) {
-    console.error("❌ MONGO_URI missing");
+    console.error("❌ MONGO_URI missing in env");
     process.exit(1);
   }
   await mongoose.connect(MONGO_URI);
   console.log("✅ MongoDB Connected");
 }
-connectDB();
+connectDB().catch((e) => {
+  console.error("❌ Mongo connect failed:", e.message);
+  process.exit(1);
+});
 
-// ---------------- MODEL ----------------
-const jobSchema = new mongoose.Schema({
-  name: String,
-  companyName: String,
-  phone: String,
-  email: String,
-  city: String,
-  jobRole: String,
-  description: String,
-}, { timestamps: true });
+// ✅ Model
+const jobSchema = new mongoose.Schema(
+  {
+    name: { type: String, default: "" },
+    companyName: { type: String, default: "" },
+    phone: { type: String, default: "" },
+    email: { type: String, default: "" },
+    city: { type: String, default: "" },
+    jobRole: { type: String, default: "" },
+    description: { type: String, default: "" },
+  },
+  { timestamps: true }
+);
 
 const Job = mongoose.model("Job", jobSchema);
 
-// ---------------- ROUTES ----------------
-
-// Health check
-app.get("/api/health", (req,res)=>{
-  res.json({ ok:true });
+// ✅ Health
+app.get("/api/health", (req, res) => {
+  res.json({ ok: true });
 });
 
-// Get jobs
-app.get("/api/jobs", async (req,res)=>{
-  const jobs = await Job.find().sort({createdAt:-1});
-  res.json(jobs);
-});
-
-// Post job  ✅ FIXED to accept any frontend keys
-app.post("/api/jobs", async (req,res)=>{
+// ✅ Get Jobs (IMPORTANT: returns {items})
+app.get("/api/jobs", async (req, res) => {
   try {
-    const p = req.body;
+    const page = Math.max(parseInt(req.query.page || "1"), 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit || "30"), 1), 100);
+    const q = (req.query.q || "").trim();
 
-    const jobRole = p.jobRole || p.role || p.jobrole;
-    const city = p.city || p.location;
-    const description = p.description || p.jobDescription;
+    const filter = q
+      ? {
+          $or: [
+            { jobRole: { $regex: q, $options: "i" } },
+            { city: { $regex: q, $options: "i" } },
+            { companyName: { $regex: q, $options: "i" } },
+            { name: { $regex: q, $options: "i" } },
+            { description: { $regex: q, $options: "i" } },
+          ],
+        }
+      : {};
 
-    if (!jobRole || !city || !description) {
-      return res.status(400).json({ message:"Missing fields", received:p });
+    const total = await Job.countDocuments(filter);
+    const totalPages = Math.max(Math.ceil(total / limit), 1);
+
+    const items = await Job.find(filter)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    res.json({ items, page, totalPages, total });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+// ✅ Post Job
+app.post("/api/jobs", async (req, res) => {
+  try {
+    const payload = req.body || {};
+
+    if (!payload.jobRole || !payload.city || !payload.description) {
+      return res
+        .status(400)
+        .json({ message: "jobRole, city, description required" });
     }
 
-    const created = await Job.create({
-      name: p.name || "",
-      companyName: p.companyName || "",
-      phone: p.phone || "",
-      email: p.email || "",
-      city,
-      jobRole,
-      description
-    });
-
+    const created = await Job.create(payload);
     res.status(201).json(created);
-  } catch(e){
-    res.status(500).json({message:e.message});
+  } catch (e) {
+    res.status(500).json({ message: e.message });
   }
 });
 
-// Delete job
-app.delete("/api/jobs/:id", async (req,res)=>{
-  const {id} = req.params;
-  const {email} = req.body;
+// ✅ Update Job (to avoid frontend errors)
+app.put("/api/jobs/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const payload = req.body || {};
 
-  const job = await Job.findById(id);
-  if(!job) return res.status(404).json({message:"Not found"});
+    const updated = await Job.findByIdAndUpdate(id, payload, { new: true });
+    if (!updated) return res.status(404).json({ message: "Job not found" });
 
-  if(job.email !== email){
-    return res.status(401).json({message:"Email mismatch"});
+    res.json(updated);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
   }
-
-  await Job.deleteOne({_id:id});
-  res.json({ok:true});
 });
 
-// ---------------- SERVE FRONTEND ----------------
+// ✅ Delete Job (verify by email)
+app.delete("/api/jobs/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email } = req.body || {};
+
+    if (!email) return res.status(400).json({ message: "Email required for delete" });
+
+    const job = await Job.findById(id);
+    if (!job) return res.status(404).json({ message: "Job not found" });
+
+    if ((job.email || "").toLowerCase() !== String(email).toLowerCase()) {
+      return res.status(401).json({ message: "Email verification failed" });
+    }
+
+    await Job.deleteOne({ _id: id });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+// ✅ Serve Frontend (Vite build)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const distPath = path.join(__dirname,"..","frontend","dist");
+const distPath = path.join(__dirname, "..", "frontend", "dist");
 
 app.use(express.static(distPath));
 
-app.get(/^(?!\/api).*$/, (req,res)=>{
-  res.sendFile(path.join(distPath,"index.html"));
+// ✅ SPA fallback (avoid api route)
+app.get(/^(?!\/api).*$/, (req, res) => {
+  res.sendFile(path.join(distPath, "index.html"));
 });
 
-app.listen(PORT, ()=>{
-  console.log("✅ Server running on",PORT);
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
 });
