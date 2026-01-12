@@ -1,39 +1,41 @@
+
 export default function JobDetailsModal({ job, onClose }) {
   if (!job) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4">
-      <div className="w-full max-w-2xl rounded-3xl bg-white p-5">
-        <div className="flex items-center justify-between">
-          <div className="text-xl font-bold">{job.jobRole || "Job Details"}</div>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.35)",
+        display: "flex",
+        alignItems: "flex-end",
+        justifyContent: "center",
+        padding: 16,
+        zIndex: 9999,
+      }}
+    >
+      <div style={{ width: "100%", maxWidth: 720, background: "#fff", borderRadius: 24, padding: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontSize: 20, fontWeight: 900 }}>{job.jobRole || "Job Details"}</div>
           <button
             onClick={onClose}
-            className="rounded-xl bg-gray-100 px-4 py-2 font-semibold"
+            style={{ padding: "10px 14px", borderRadius: 14, border: "1px solid #ddd", background: "#f3f3f3" }}
           >
             Close
           </button>
         </div>
 
-        <div className="mt-4 space-y-2 text-sm">
-          <div>
-            <span className="font-semibold">City:</span> {job.city || "-"}
-          </div>
-          <div>
-            <span className="font-semibold">Company:</span> {job.companyName || "-"}
-          </div>
-          <div>
-            <span className="font-semibold">Name:</span> {job.name || "-"}
-          </div>
-          <div>
-            <span className="font-semibold">Phone:</span> {job.phone || "-"}
-          </div>
-          <div>
-            <span className="font-semibold">Email:</span> {job.email || "-"}
-          </div>
+        <div style={{ marginTop: 12, fontSize: 14, lineHeight: 1.6 }}>
+          <div><b>City:</b> {job.city || "-"}</div>
+          <div><b>Company:</b> {job.companyName || "-"}</div>
+          <div><b>Name:</b> {job.name || "-"}</div>
+          <div><b>Phone:</b> {job.phone || "-"}</div>
+          <div><b>Email:</b> {job.email || "-"}</div>
 
-          <div className="pt-2">
-            <div className="font-semibold">Description</div>
-            <div className="mt-1 whitespace-pre-wrap text-gray-700">
+          <div style={{ marginTop: 10 }}>
+            <b>Description:</b>
+            <div style={{ marginTop: 6, whiteSpace: "pre-wrap", color: "#444" }}>
               {job.description || "-"}
             </div>
           </div>
