@@ -1,7 +1,8 @@
 import axios from "axios";
 
-// ✅ Force live API (fixes AppsGeyser + production issues)
-const BASE_URL = "https://saudijob.onrender.com/api";
+// ✅ Always use relative API path on production
+// Because frontend + backend same Render service
+const BASE_URL = "/api";
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -9,7 +10,9 @@ export const api = axios.create({
 
 // Get Jobs
 export function getJobs({ page = 1, limit = 30, q = "" } = {}) {
-  return api.get("/jobs", { params: { page, limit, q } });
+  return api.get("/jobs", {
+    params: { page, limit, q },
+  });
 }
 
 // Post Job
