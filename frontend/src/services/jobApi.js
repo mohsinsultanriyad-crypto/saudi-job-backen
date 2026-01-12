@@ -3,7 +3,7 @@ import axios from "axios";
 // ✅ Local: http://localhost:8000/api
 // ✅ Live (Render): same domain => "/api"
 const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV
-  ? "http://localhost:8000/api"
+  ? "https://saudijob.onrender.com/api/jobs/api"
   : "/api");
 
 export const api = axios.create({
